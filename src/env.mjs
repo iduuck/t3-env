@@ -7,17 +7,14 @@ import { z } from "zod";
  */
 const server = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
-  NEXTAUTH_SECRET:
-    process.env.NODE_ENV === "production"
-      ? z.string().min(1)
-      : z.string().min(1).optional(),
-  NEXTAUTH_URL: z.preprocess(
-    // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
-    // Since NextAuth.js automatically uses the VERCEL_URL if present.
-    (str) => process.env.VERCEL_URL ?? str,
-    // VERCEL_URL doesn't include `https` so it cant be validated as a URL
-    process.env.VERCEL ? z.string() : z.string().url()
-  ),
+  BAZ: z.string(),
+  FOO: z.preprocess((x) => {
+    if (typeof x === "string") {
+      return x.length;
+    } else {
+      return 0;
+    }
+  }, z.number()),
 });
 
 /**
@@ -26,7 +23,7 @@ const server = z.object({
  * To expose them to the client, prefix them with `NEXT_PUBLIC_`.
  */
 const client = z.object({
-  NEXT_PUBLIC_CLIENTVAR: z.string(),
+  NEXT_PUBLIC_BAR: z.string(),
 });
 
 /**
@@ -36,9 +33,9 @@ const client = z.object({
  */
 const processEnv = {
   NODE_ENV: process.env.NODE_ENV,
-  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-  NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
+  BAZ: process.env.BAZ,
+  FOO: process.env.FOO,
+  NEXT_PUBLIC_BAR: process.env.NEXT_PUBLIC_BAR,
 };
 
 // Don't touch the part below
@@ -68,6 +65,31 @@ if (parsed.success === false) {
   throw new Error("Invalid environment variables");
 }
 
+console.log('parsed data', parsed.data)
+
+/**
+ * This is a rough draft, that can be optimized.
+ */
+const envHandler = {
+  get(target, prop) {
+    const schema = server.pick({ [prop]: true });
+    const result = schema.safeParse({ [prop]: target[prop] });
+
+    console.log(result)
+
+    if (result.success) {
+      return target[prop];
+    } else {
+      console.error(
+        "You tried to access an environment variable, that is only available on the server."
+      );
+      return undefined;
+    }
+  },
+};
+
+const environmentProxy = new Proxy(parsed.data, envHandler)
+
 /** @type z.infer<merged>
  * @ts-ignore - technically lying here */
-export const env = parsed.data;
+export default environmentProxy

@@ -2,9 +2,10 @@ import styles from "./index.module.css";
 import { type NextPage } from "next";
 import Head from "next/head";
 import Link from "next/link";
-import { env } from "../env.mjs";
+import env from '../env.mjs'
 
 const Home: NextPage = () => {
+  console.log("index", env);
   return (
     <>
       <Head>
@@ -17,7 +18,7 @@ const Home: NextPage = () => {
           <h1 className={styles.title}>
             Create <span className={styles.pinkSpan}>T3</span> App
           </h1>
-          <p className={styles.title}>{env.NEXT_PUBLIC_CLIENTVAR}</p>
+          <p className={styles.title}>{env.BAZ}</p>
 
           <div className={styles.cardRow}>
             <Link
@@ -47,6 +48,12 @@ const Home: NextPage = () => {
       </main>
     </>
   );
+};
+
+export const getServerSideProps = () => {
+  console.log("index getServerSideProps", process.env);
+
+  return { props: {} };
 };
 
 export default Home;
